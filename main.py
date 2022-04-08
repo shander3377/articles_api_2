@@ -1,29 +1,62 @@
 from flask import Flask, jsonify, request
-
-from storage import all_articles, liked_articles, disliked_articles
+# from flask_ngrok import run_with_ngrok
+from storage import all_articles, liked_articles, not_liked_articles
 from demographic_filtering import output
-from content_based_filtering import get_recommendations
-
+from content_filtering import get_recommendations
+import random
 app = Flask(__name__)
+# run_with_ngrok(app)
+@app.route("/get-article")
+def get_article():
+    movie_data = {
+        "url": all_articles[0][11],
+        "title": all_articles[0][12],
+        "text": all_articles[0][13],
+        "lang": all_articles[0][14],
+        "total_events": all_articles[0][15]
+    }
+    return jsonify({
+        "data": movie_data,
+        "status": "success"
+    })
 
-@app.route("/getPopularArticles")
+@app.route("/like-article", methods=["POST"])
+def liked_article():
+    article = all_articles[0]
+    liked_articles.append(article)
+    all_articles.pop(0)
+    return jsonify({
+        "status": "success"
+    }), 201
+
+@app.route("/dislike-article", methods=["POST"])
+def unliked_article():
+    article = all_articles[0]
+    not_liked_articles.append(article)
+    all_articles.pop(0)
+    return jsonify({
+        "status": "success"
+    }), 201
+
+@app.route("/popular-articles")
 def popular_articles():
-    data: []
+    article_data = []
     for article in output:
-        d = {
+        _d = {
             "url": article[0],
-              "text": article[1],
-            "title": article[2],
+            "title": article[1],
+            "text": article[2],
             "lang": article[3],
             "total_events": article[4]
         }
-        data.append(d)
+        article_data.append(_d)
+        random.shuffle(article_data)
     return jsonify({
-        "data": data,
+        "data": article_data[0],
         "status": "success"
     }), 200
 
-@app.route("/recommendedArticles")
+@app.route("/recommend-articles")
 def recommended_articles():
     all_recommended = []
     for liked_article in liked_articles:
@@ -37,40 +70,25 @@ def recommended_articles():
     for recommended in all_recommended:
         _d = {
             "url": recommended[0],
-            "text": recommended[1],
-            "title": recommended[2],
+            "title": recommended[1],
+            "text": recommended[2],
             "lang": recommended[3],
             "total_events": recommended[4]
         }
         article_data.append(_d)
+        random.shuffle(article_data)
     return jsonify({
-        "data": article_data,
+        "data": article_data[0],
         "status": "success"
     }), 200
 
-
-
-
-@ap.proute("/getArticle")
-def getArticle():
-    return jsonify({"data": all_articles[0], "status": "success"}) 
-
-@app.route('/likedArticles', methods = ["POST"])
-def likedMovies():
-    article = all_articles[0]
-    all_articles = all_articles[1:]
-    liked_articles.append(movie)
+@app.route("/refresh-article", methods=["POST"])
+def refresh_articles():
+    random.shuffle(all_articles)
     return jsonify({
         "status": "success"
     }), 201
+    
 
-@app.route('/dislikedArticles', methods = ["POST"])
-def likedMovies():
-    article = all_articles[0]
-    all_articles = all_articles[1:]
-    disliked_articles.append(movie)
-    return jsonify({
-        "status": "success"
-    }), 201
-
-
+if __name__ == "__main__":
+    app.run()
